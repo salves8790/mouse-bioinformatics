@@ -1,0 +1,20 @@
+spocc_download = occ(query='Apodemus sylvaticus',from='gbif', limit = 2000)
+library(spocc)
+library(dismo)
+wc = getData('worldclim', var='bio', res=5)
+df = as.data.frame(occ2df(spocc_download$gbif))
+library(ENMeval)
+library(raster)
+ext = extent(c(-21, 54, 36, 68))
+predictors = crop(wc,ext)
+occdat <- occ2df(spocc_download)
+loc = occdat[,c('longitude', 'latitude')]
+eval = ENMevaluate(occ=as.data.frame(loc), env = predictors, method='block', parallel=FALSE, fc=c("L", "LQ"), RMvalues=seq(0.5, 2, 0.5), rasterPreds=T)
+eval@results
+best=2
+est.loc = extract(eval@predictions[[best]], loc)
+est.bg = extract(eval@predictions[[best]], eval@bg.pts)
+ev = evaluate(est.loc, est.bg)
+thr = threshold(ev)
+plot(eval@predictions[[best]] > thr$equal_sens_spec, col=c('darkgrey', 'lightblue'))
+points(as.data.frame(loc), pch=20, cex=0.1)
